@@ -1,57 +1,93 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <style>
     body {
       font-family: Inter, system-ui, sans-serif;
-      padding: 12px;
+      padding: 16px;
+      font-size: 12px;
     }
+
+    h3 {
+      margin: 0 0 8px 0;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
     label {
       display: block;
-      margin-bottom: 8px;
-      font-size: 12px;
+      margin-bottom: 4px;
+      font-weight: 500;
     }
-    input {
+
+    input,
+    button {
       width: 100%;
-      margin-top: 4px;
-      padding: 6px;
+      margin-bottom: 12px;
       box-sizing: border-box;
     }
+
     button {
-      margin-top: 12px;
-      width: 100%;
-      padding: 8px;
-      font-size: 12px;
+      height: 32px;
+      font-weight: 600;
       cursor: pointer;
+    }
+
+    hr {
+      margin: 16px 0;
+      border: none;
+      border-top: 1px solid #e5e5e5;
     }
   </style>
 </head>
 <body>
 
-  <label>
-    Width
-    <input id="width" type="number" value="1440" />
-  </label>
+  <!-- LARGE TILE -->
+  <h3>Large tile</h3>
 
-  <label>
-    Height
-    <input id="height" type="number" value="1800" />
-  </label>
+  <label for="large-width">Width</label>
+  <input id="large-width" type="number" value="1440" />
 
-  <button id="generate">Generate Tile</button>
+  <label for="large-height">Height</label>
+  <input id="large-height" type="number" value="1800" />
+
+  <button id="generate-large">Generate large tile</button>
+
+  <hr />
+
+  <!-- SMALL TILE -->
+  <h3>Small tile</h3>
+
+  <label for="small-width">Width</label>
+  <input id="small-width" type="number" value="300" />
+
+  <label for="small-height">Height</label>
+  <input id="small-height" type="number" value="250" />
+
+  <button id="generate-small">Generate small tile</button>
 
   <script>
-    document.getElementById("generate").onclick = () => {
-      const width = Number(document.getElementById("width").value);
-      const height = Number(document.getElementById("height").value);
-
+    document.getElementById("generate-large").onclick = () => {
       parent.postMessage(
         {
           pluginMessage: {
-            type: "generate",
-            width,
-            height
+            type: "generate-large",
+            width: Number(document.getElementById("large-width").value),
+            height: Number(document.getElementById("large-height").value)
+          }
+        },
+        "*"
+      );
+    };
+
+    document.getElementById("generate-small").onclick = () => {
+      parent.postMessage(
+        {
+          pluginMessage: {
+            type: "generate-small",
+            width: Number(document.getElementById("small-width").value),
+            height: Number(document.getElementById("small-height").value)
           }
         },
         "*"
