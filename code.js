@@ -1,21 +1,43 @@
-figma.showUI(__html__, { width: 260, height: 420 });
+figma.showUI(__html__, { width: 260, height: 500 });
+
+/* ======================================================
+   Tile profiles
+   ====================================================== */
 
 const TILE_PROFILES = {
   large: {
     OUTER_PCT: 0.02875,
     INNER_PCT: 0.0875,
-    RADIUS_PCT: 0.20
+    RADIUS_PCT: 0.2
   },
   small: {
     OUTER_PCT: 0.03,
     INNER_PCT: 0.09,
-    RADIUS_PCT: 0.20
+    RADIUS_PCT: 0.2
   }
 };
 
-figma.ui.onmessage = (msg) => {
-  if (msg.type !== "generate") return;
+/* ======================================================
+   Message router
+   ====================================================== */
 
+figma.ui.onmessage = (msg) => {
+  switch (msg.type) {
+    case "generate":
+      handleGenerateTile(msg);
+      break;
+
+    case "apply-radius":
+      applyCornerRadiusToSelection();
+      break;
+  }
+};
+
+/* ======================================================
+   Tile generation
+   ====================================================== */
+
+function handleGenerateTile(msg) {
   const { width, height, tileType } = msg;
   const profile = TILE_PROFILES[tileType];
 
@@ -32,7 +54,7 @@ figma.ui.onmessage = (msg) => {
   frame.y = viewportCenter.y - height / 2;
 
   figma.currentPage.selection = [frame];
-};
+}
 
 function createTile(W, H, profile, tileType) {
   const { OUTER_PCT, INNER_PCT, RADIUS_PCT } = profile;
@@ -73,19 +95,87 @@ function createTile(W, H, profile, tileType) {
   frame.clipsContent = false;
 
   const mask = figma.createVector();
-  mask.vectorPaths = [{ windingRule: "EVENODD", data: pathData }];
+  mask.vectorPaths = [
+    {
+      windingRule: "EVENODD",
+      data: pathData
+    }
+  ];
   mask.resize(W, H);
   mask.isMask = true;
   mask.name = "mask";
-  mask.fills = [{ type: "SOLID", color: { r: 0x35/255, g: 0x67/255, b: 0xF6/255 } }];
+  mask.fills = [
+    {
+      type: "SOLID",
+      color: {
+        r: 0x35 / 255,
+        g: 0x67 / 255,
+        b: 0xF6 / 255
+      }
+    }
+  ];
 
   const placeholder = figma.createRectangle();
   placeholder.resize(W, H);
   placeholder.name = "image";
-  placeholder.fills = [{ type: "SOLID", color: { r: 0x35/255, g: 0x67/255, b: 0xF6/255 } }];
+  placeholder.fills = [
+    {
+      type: "SOLID",
+      color: {
+        r: 0x35 / 255,
+        g: 0x67 / 255,
+        b: 0xF6 / 255
+      }
+    }
+  ];
 
   frame.appendChild(mask);
   frame.appendChild(placeholder);
 
   return frame;
+}
+
+/* ======================================================
+   Corner radius tool
+   ====================================================== */
+
+function applyCornerRadiusToSelection() {
+  const selection = figma.currentPage.selection;
+
+  if (selection.length !== 1) {
+    figma.notify("Please select a single shape");
+    return;
+  }
+
+  const node = selection[0];
+
+  const SUPPORTED_TYPES = [
+    "FRAME",
+    "RECTANGLE",
+    "COMPONENT",
+    "INSTANCE",
+    "VECTOR"
+  ];
+
+  if (!SUPPORTED_TYPES.includes(node.type)) {
+    figma.notify("Selected item does not support corner radius");
+    return;
+  }
+
+  let width, height;
+
+  if ("absoluteBoundingBox" in node && node.absoluteBoundingBox) {
+    width = node.absoluteBoundingBox.width;
+    height = node.absoluteBoundingBox.height;
+  } else {
+    width = node.width;
+    height = node.height;
+  }
+
+  const shortest = Math.min(width, height);
+  const radius = shortest * 0.2;
+
+  node.cornerRadius = radius;
+
+  figma.notify(`Corner radius applied (${Math.round(radius)}px)`);
 }

@@ -37,6 +37,11 @@
     .section {
       margin-bottom: 20px;
     }
+
+    p {
+      font-size: 12px;
+      margin: 0 0 8px;
+    }
   </style>
 </head>
 <body>
@@ -73,6 +78,12 @@
     <button id="generate-small">Generate small tile</button>
   </div>
 
+  <div class="section">
+    <h3>Corner radius</h3>
+    <p>Please select shape before applying corner radius</p>
+    <button id="apply-radius">Apply corner radius</button>
+  </div>
+
   <script>
     document.getElementById("generate-large").onclick = () => {
       parent.postMessage(
@@ -96,6 +107,17 @@
             tileType: "small",
             width: Number(document.getElementById("small-width").value),
             height: Number(document.getElementById("small-height").value)
+          }
+        },
+        "*"
+      );
+    };
+
+    document.getElementById("apply-radius").onclick = () => {
+      parent.postMessage(
+        {
+          pluginMessage: {
+            type: "apply-radius"
           }
         },
         "*"
