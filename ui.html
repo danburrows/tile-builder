@@ -1,78 +1,85 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <style>
     body {
       font-family: Inter, system-ui, sans-serif;
-      padding: 16px;
-      font-size: 12px;
+      padding: 12px;
     }
 
     h3 {
-      margin: 0 0 8px 0;
-      font-size: 13px;
-      font-weight: 600;
+      margin: 16px 0 8px;
+      font-size: 14px;
     }
 
     label {
       display: block;
-      margin-bottom: 4px;
-      font-weight: 500;
+      margin-bottom: 8px;
+      font-size: 12px;
     }
 
-    input,
-    button {
+    input {
       width: 100%;
-      margin-bottom: 12px;
+      margin-top: 4px;
+      padding: 6px;
       box-sizing: border-box;
     }
 
     button {
-      height: 32px;
-      font-weight: 600;
+      margin-top: 12px;
+      width: 100%;
+      padding: 8px;
+      font-size: 12px;
       cursor: pointer;
     }
 
-    hr {
-      margin: 16px 0;
-      border: none;
-      border-top: 1px solid #e5e5e5;
+    .section {
+      margin-bottom: 20px;
     }
   </style>
 </head>
 <body>
 
-  <!-- LARGE TILE -->
-  <h3>Large tile</h3>
+  <div class="section">
+    <h3>Large tile</h3>
 
-  <label for="large-width">Width</label>
-  <input id="large-width" type="number" value="1440" />
+    <label>
+      Width
+      <input id="large-width" type="number" value="1440" />
+    </label>
 
-  <label for="large-height">Height</label>
-  <input id="large-height" type="number" value="1800" />
+    <label>
+      Height
+      <input id="large-height" type="number" value="1800" />
+    </label>
 
-  <button id="generate-large">Generate large tile</button>
+    <button id="generate-large">Generate large tile</button>
+  </div>
 
-  <hr />
+  <div class="section">
+    <h3>Small tile</h3>
 
-  <!-- SMALL TILE -->
-  <h3>Small tile</h3>
+    <label>
+      Width
+      <input id="small-width" type="number" value="300" />
+    </label>
 
-  <label for="small-width">Width</label>
-  <input id="small-width" type="number" value="300" />
+    <label>
+      Height
+      <input id="small-height" type="number" value="250" />
+    </label>
 
-  <label for="small-height">Height</label>
-  <input id="small-height" type="number" value="250" />
-
-  <button id="generate-small">Generate small tile</button>
+    <button id="generate-small">Generate small tile</button>
+  </div>
 
   <script>
     document.getElementById("generate-large").onclick = () => {
       parent.postMessage(
         {
           pluginMessage: {
-            type: "generate-large",
+            type: "generate",
+            tileType: "large",
             width: Number(document.getElementById("large-width").value),
             height: Number(document.getElementById("large-height").value)
           }
@@ -85,7 +92,8 @@
       parent.postMessage(
         {
           pluginMessage: {
-            type: "generate-small",
+            type: "generate",
+            tileType: "small",
             width: Number(document.getElementById("small-width").value),
             height: Number(document.getElementById("small-height").value)
           }
