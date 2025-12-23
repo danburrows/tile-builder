@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      padding: 12px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    input {
+      width: 100%;
+      margin-top: 4px;
+      padding: 6px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 12px;
+      width: 100%;
+      padding: 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <label>
+    Width
+    <input id="width" type="number" value="1440" />
+  </label>
+
+  <label>
+    Height
+    <input id="height" type="number" value="1800" />
+  </label>
+
+  <button id="generate">Generate Tile</button>
+
+  <script>
+    document.getElementById("generate").onclick = () => {
+      const width = Number(document.getElementById("width").value);
+      const height = Number(document.getElementById("height").value);
+
+      parent.postMessage(
+        {
+          pluginMessage: {
+            type: "generate",
+            width,
+            height
+          }
+        },
+        "*"
+      );
+    };
+  </script>
+
+</body>
+</html>

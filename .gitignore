@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Node / tooling (future-proofing)
+node_modules
+out/
+dist/
+.env
+.vscode/
+
+# Logs
+*.log
+*.log.*
+
