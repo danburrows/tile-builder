@@ -1,69 +1,84 @@
-// Tile Builder – Frame with inset masked tile
+figma.showUI(__html__, { width: 260, height: 500 });
 
-figma.showUI(__html__, { width: 260, height: 300 });
+/* ======================================================
+   Tile profiles
+   ====================================================== */
+
+const TILE_PROFILES = {
+  large: {
+    OUTER_PCT: 0.02875,
+    INNER_PCT: 0.0875,
+    RADIUS_PCT: 0.2
+  },
+  small: {
+    OUTER_PCT: 0.03,
+    INNER_PCT: 0.09,
+    RADIUS_PCT: 0.2
+  }
+};
+
+/* ======================================================
+   Message router
+   ====================================================== */
 
 figma.ui.onmessage = (msg) => {
-  if (msg.type !== "generate") return;
+  switch (msg.type) {
+    case "generate":
+      handleGenerateTile(msg);
+      break;
 
-  const W = msg.width;
-  const H = msg.height;
+    case "apply-radius":
+      applyCornerRadiusToSelection();
+      break;
+  }
+};
 
-  // ===============================
-  // Core percentage system
-  // ===============================
+/* ======================================================
+   Tile generation
+   ====================================================== */
 
-  const OUTER_PCT = 0.02875; // padding relative to input size
-  const INNER_PCT = 0.0875;  // curve depth relative to inner tile
-  const RADIUS_PCT = 0.20;   // curve span (still geometric, not corner radius)
+function handleGenerateTile(msg) {
+  const { width, height, tileType } = msg;
+  const profile = TILE_PROFILES[tileType];
 
-  // ===============================
-  // Outer inset + inner tile size
-  // ===============================
+  if (!profile) {
+    figma.notify("Unknown tile type");
+    return;
+  }
 
-  const outerInset = W * OUTER_PCT;
+  const frame = createTile(width, height, profile, tileType);
+  figma.currentPage.appendChild(frame);
 
-  const tileW = W - (outerInset * 2);
-  const tileH = H - (outerInset * 2);
+  const viewportCenter = figma.viewport.center;
+  frame.x = viewportCenter.x - width / 2;
+  frame.y = viewportCenter.y - height / 2;
 
-  // ===============================
-  // Geometry values (INNER tile–driven)
-  // ===============================
+  figma.currentPage.selection = [frame];
+}
 
-  const inner = tileW * INNER_PCT;
-  const radius = tileW * RADIUS_PCT;
+function createTile(W, H, profile, tileType) {
+  const { OUTER_PCT, INNER_PCT, RADIUS_PCT } = profile;
 
-  // ===============================
-  // Anchors (local to tile)
-  // ===============================
+  const outer = W * OUTER_PCT;
+  const inner = W * INNER_PCT;
+  const radius = W * RADIUS_PCT;
 
-  const TL = { x: 0,        y: 0 };
-  const TR = { x: tileW,   y: 0 };
-  const BR = { x: tileW,   y: tileH };
-  const BL = { x: 0,        y: tileH };
+  const TL = { x: outer, y: outer };
+  const TR = { x: W - outer, y: outer };
+  const BR = { x: W - outer, y: H - outer };
+  const BL = { x: outer, y: H - outer };
 
-  // ===============================
-  // Bézier handles
-  // ===============================
-
-  // Top
   const TL_out = { x: TL.x + radius, y: TL.y - inner };
   const TR_in  = { x: TR.x - radius, y: TR.y - inner };
 
-  // Right
   const TR_out = { x: TR.x + inner, y: TR.y + radius };
   const BR_in  = { x: BR.x + inner, y: BR.y - radius };
 
-  // Bottom
   const BR_out = { x: BR.x - radius, y: BR.y + inner };
   const BL_in  = { x: BL.x + radius, y: BL.y + inner };
 
-  // Left
   const BL_out = { x: BL.x - inner, y: BL.y - radius };
   const TL_in  = { x: TL.x - inner, y: TL.y + radius };
-
-  // ===============================
-  // SVG path (tile-local)
-  // ===============================
 
   const pathData =
     `M ${TL.x} ${TL.y}` +
@@ -73,69 +88,94 @@ figma.ui.onmessage = (msg) => {
     ` C ${BL_out.x} ${BL_out.y} ${TL_in.x} ${TL_in.y} ${TL.x} ${TL.y}` +
     ` Z`;
 
-  // ===============================
-  // Frame (outer container)
-  // ===============================
-
   const frame = figma.createFrame();
   frame.resize(W, H);
-  frame.name = `tile_${W}x${H}`;
+  frame.name = `tile_${tileType}_${W}x${H}`;
   frame.fills = [];
   frame.clipsContent = false;
 
-  // ===============================
-  // Mask (inner tile)
-  // ===============================
-
   const mask = figma.createVector();
   mask.vectorPaths = [
-    { windingRule: "EVENODD", data: pathData }
+    {
+      windingRule: "EVENODD",
+      data: pathData
+    }
   ];
-
-  mask.resize(tileW, tileH);
-  mask.x = outerInset;
-  mask.y = outerInset;
+  mask.resize(W, H);
   mask.isMask = true;
   mask.name = "mask";
-
   mask.fills = [
     {
       type: "SOLID",
-      color: { r: 0x35 / 255, g: 0x67 / 255, b: 0xF6 / 255 }
+      color: {
+        r: 0x35 / 255,
+        g: 0x67 / 255,
+        b: 0xF6 / 255
+      }
     }
   ];
 
-  // ===============================
-  // Image placeholder (same as mask)
-  // ===============================
-
   const placeholder = figma.createRectangle();
-  placeholder.resize(tileW, tileH);
-  placeholder.x = outerInset;
-  placeholder.y = outerInset;
+  placeholder.resize(W, H);
   placeholder.name = "image";
   placeholder.fills = [
     {
       type: "SOLID",
-      color: { r: 0x35 / 255, g: 0x67 / 255, b: 0xF6 / 255 }
+      color: {
+        r: 0x35 / 255,
+        g: 0x67 / 255,
+        b: 0xF6 / 255
+      }
     }
   ];
 
-  // ===============================
-  // Assemble
-  // ===============================
-
   frame.appendChild(mask);
   frame.appendChild(placeholder);
-  figma.currentPage.appendChild(frame);
 
-  // ===============================
-  // Centre in viewport
-  // ===============================
+  return frame;
+}
 
-  const viewportCenter = figma.viewport.center;
-  frame.x = viewportCenter.x - W / 2;
-  frame.y = viewportCenter.y - H / 2;
+/* ======================================================
+   Corner radius tool
+   ====================================================== */
 
-  figma.currentPage.selection = [frame];
-};
+function applyCornerRadiusToSelection() {
+  const selection = figma.currentPage.selection;
+
+  if (selection.length !== 1) {
+    figma.notify("Please select a single shape");
+    return;
+  }
+
+  const node = selection[0];
+
+  const SUPPORTED_TYPES = [
+    "FRAME",
+    "RECTANGLE",
+    "COMPONENT",
+    "INSTANCE",
+    "VECTOR"
+  ];
+
+  if (!SUPPORTED_TYPES.includes(node.type)) {
+    figma.notify("Selected item does not support corner radius");
+    return;
+  }
+
+  let width, height;
+
+  if ("absoluteBoundingBox" in node && node.absoluteBoundingBox) {
+    width = node.absoluteBoundingBox.width;
+    height = node.absoluteBoundingBox.height;
+  } else {
+    width = node.width;
+    height = node.height;
+  }
+
+  const shortest = Math.min(width, height);
+  const radius = shortest * 0.2;
+
+  node.cornerRadius = radius;
+
+  figma.notify(`Corner radius applied (${Math.round(radius)}px)`);
+}

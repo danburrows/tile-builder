@@ -38,11 +38,9 @@
       margin-bottom: 20px;
     }
 
-    .note {
-      font-size: 11px;
-      color: #666;
-      line-height: 1.4;
-      margin-top: 8px;
+    p {
+      font-size: 12px;
+      margin: 0 0 8px;
     }
   </style>
 </head>
@@ -78,10 +76,12 @@
     </label>
 
     <button id="generate-small">Generate small tile</button>
+  </div>
 
-    <div class="note">
-      All profile-based values apply a minimum of 6px to prevent visual collapse at small sizes.
-    </div>
+  <div class="section">
+    <h3>Corner radius</h3>
+    <p>Please select shape before applying corner radius</p>
+    <button id="apply-radius">Apply corner radius</button>
   </div>
 
   <script>
@@ -107,6 +107,17 @@
             tileType: "small",
             width: Number(document.getElementById("small-width").value),
             height: Number(document.getElementById("small-height").value)
+          }
+        },
+        "*"
+      );
+    };
+
+    document.getElementById("apply-radius").onclick = () => {
+      parent.postMessage(
+        {
+          pluginMessage: {
+            type: "apply-radius"
           }
         },
         "*"
