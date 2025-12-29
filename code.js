@@ -1,4 +1,12 @@
-figma.showUI(__html__, { width: 260, height: 500 });
+figma.showUI(__html__, { width: 260, height: 420 });
+
+/* ======================================================
+   Utilities
+   ====================================================== */
+
+function withMin(value, min = 6) {
+  return Math.max(value, min);
+}
 
 /* ======================================================
    Tile profiles
@@ -8,12 +16,14 @@ const TILE_PROFILES = {
   large: {
     OUTER_PCT: 0.02875,
     INNER_PCT: 0.0875,
-    RADIUS_PCT: 0.2
+    RADIUS_PCT: 0.2,
+    IMAGE_OFFSET_PCT: -0.0875
   },
   small: {
     OUTER_PCT: 0.03,
     INNER_PCT: 0.09,
-    RADIUS_PCT: 0.2
+    RADIUS_PCT: 0.2,
+    IMAGE_OFFSET_PCT: -0.09
   }
 };
 
@@ -22,14 +32,8 @@ const TILE_PROFILES = {
    ====================================================== */
 
 figma.ui.onmessage = (msg) => {
-  switch (msg.type) {
-    case "generate":
-      handleGenerateTile(msg);
-      break;
-
-    case "apply-radius":
-      applyCornerRadiusToSelection();
-      break;
+  if (msg.type === "generate") {
+    handleGenerateTile(msg);
   }
 };
 
@@ -57,28 +61,38 @@ function handleGenerateTile(msg) {
 }
 
 function createTile(W, H, profile, tileType) {
-  const { OUTER_PCT, INNER_PCT, RADIUS_PCT } = profile;
+  const { OUTER_PCT, INNER_PCT, RADIUS_PCT, IMAGE_OFFSET_PCT } = profile;
 
-  const outer = W * OUTER_PCT;
-  const inner = W * INNER_PCT;
-  const radius = W * RADIUS_PCT;
+  const shortest = Math.min(W, H);
+
+  /* ------------------------------
+     Geometry values (clamped)
+     ------------------------------ */
+
+  const outer = withMin(W * OUTER_PCT);
+  const inner = withMin(W * INNER_PCT);
+  const curveSpan = withMin(W * RADIUS_PCT);
+
+  /* ------------------------------
+     Path construction
+     ------------------------------ */
 
   const TL = { x: outer, y: outer };
   const TR = { x: W - outer, y: outer };
   const BR = { x: W - outer, y: H - outer };
   const BL = { x: outer, y: H - outer };
 
-  const TL_out = { x: TL.x + radius, y: TL.y - inner };
-  const TR_in  = { x: TR.x - radius, y: TR.y - inner };
+  const TL_out = { x: TL.x + curveSpan, y: TL.y - inner };
+  const TR_in  = { x: TR.x - curveSpan, y: TR.y - inner };
 
-  const TR_out = { x: TR.x + inner, y: TR.y + radius };
-  const BR_in  = { x: BR.x + inner, y: BR.y - radius };
+  const TR_out = { x: TR.x + inner, y: TR.y + curveSpan };
+  const BR_in  = { x: BR.x + inner, y: BR.y - curveSpan };
 
-  const BR_out = { x: BR.x - radius, y: BR.y + inner };
-  const BL_in  = { x: BL.x + radius, y: BL.y + inner };
+  const BR_out = { x: BR.x - curveSpan, y: BR.y + inner };
+  const BL_in  = { x: BL.x + curveSpan, y: BL.y + inner };
 
-  const BL_out = { x: BL.x - inner, y: BL.y - radius };
-  const TL_in  = { x: TL.x - inner, y: TL.y + radius };
+  const BL_out = { x: BL.x - inner, y: BL.y - curveSpan };
+  const TL_in  = { x: TL.x - inner, y: TL.y + curveSpan };
 
   const pathData =
     `M ${TL.x} ${TL.y}` +
@@ -88,11 +102,19 @@ function createTile(W, H, profile, tileType) {
     ` C ${BL_out.x} ${BL_out.y} ${TL_in.x} ${TL_in.y} ${TL.x} ${TL.y}` +
     ` Z`;
 
+  /* ------------------------------
+     Frame
+     ------------------------------ */
+
   const frame = figma.createFrame();
   frame.resize(W, H);
-  frame.name = `tile_${tileType}_${W}x${H}`;
+  frame.name = `${W}x${H}`;
   frame.fills = [];
   frame.clipsContent = false;
+
+  /* ------------------------------
+     Mask vector
+     ------------------------------ */
 
   const mask = figma.createVector();
   mask.vectorPaths = [
@@ -115,6 +137,13 @@ function createTile(W, H, profile, tileType) {
     }
   ];
 
+  // corner radius (clamped)
+  mask.cornerRadius = withMin(shortest * RADIUS_PCT);
+
+  /* ------------------------------
+     Image placeholder
+     ------------------------------ */
+
   const placeholder = figma.createRectangle();
   placeholder.resize(W, H);
   placeholder.name = "image";
@@ -129,53 +158,27 @@ function createTile(W, H, profile, tileType) {
     }
   ];
 
+  // image bleed offset (clamped, signed)
+  const rawOffset = shortest * IMAGE_OFFSET_PCT;
+  const imageOffset =
+    rawOffset < 0
+      ? -withMin(Math.abs(rawOffset))
+      : withMin(rawOffset);
+
+  placeholder.x = imageOffset;
+  placeholder.y = imageOffset;
+
+  placeholder.constraints = {
+    horizontal: "STRETCH",
+    vertical: "STRETCH"
+  };
+
+  /* ------------------------------
+     Assemble
+     ------------------------------ */
+
   frame.appendChild(mask);
   frame.appendChild(placeholder);
 
   return frame;
-}
-
-/* ======================================================
-   Corner radius tool
-   ====================================================== */
-
-function applyCornerRadiusToSelection() {
-  const selection = figma.currentPage.selection;
-
-  if (selection.length !== 1) {
-    figma.notify("Please select a single shape");
-    return;
-  }
-
-  const node = selection[0];
-
-  const SUPPORTED_TYPES = [
-    "FRAME",
-    "RECTANGLE",
-    "COMPONENT",
-    "INSTANCE",
-    "VECTOR"
-  ];
-
-  if (!SUPPORTED_TYPES.includes(node.type)) {
-    figma.notify("Selected item does not support corner radius");
-    return;
-  }
-
-  let width, height;
-
-  if ("absoluteBoundingBox" in node && node.absoluteBoundingBox) {
-    width = node.absoluteBoundingBox.width;
-    height = node.absoluteBoundingBox.height;
-  } else {
-    width = node.width;
-    height = node.height;
-  }
-
-  const shortest = Math.min(width, height);
-  const radius = shortest * 0.2;
-
-  node.cornerRadius = radius;
-
-  figma.notify(`Corner radius applied (${Math.round(radius)}px)`);
 }
