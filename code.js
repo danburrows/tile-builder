@@ -1,4 +1,4 @@
-// Tile Builder – Frame-based masked tile (final geometry)
+// Tile Builder – Frame with inset masked tile
 
 figma.showUI(__html__, { width: 260, height: 300 });
 
@@ -9,12 +9,12 @@ figma.ui.onmessage = (msg) => {
   const H = msg.height;
 
   // ===============================
-  // Percentage system
+  // Core percentage system
   // ===============================
 
   const OUTER_PCT = 0.02875; // padding relative to input size
-  const INNER_PCT = 0.0875;  // edge bulge depth
-  const CORNER_RADIUS_PCT = 0.20; // 20% of smallest dimension
+  const INNER_PCT = 0.0875;  // curve depth relative to inner tile
+  const RADIUS_PCT = 0.20;   // curve span (still geometric, not corner radius)
 
   // ===============================
   // Outer inset + inner tile size
@@ -26,42 +26,40 @@ figma.ui.onmessage = (msg) => {
   const tileH = H - (outerInset * 2);
 
   // ===============================
-  // Geometry values (tile-driven)
+  // Geometry values (INNER tile–driven)
   // ===============================
 
   const inner = tileW * INNER_PCT;
-
-  const smallest = Math.min(tileW, tileH);
-  const cornerRadius = smallest * CORNER_RADIUS_PCT;
+  const radius = tileW * RADIUS_PCT;
 
   // ===============================
-  // Anchor points (corner inset)
+  // Anchors (local to tile)
   // ===============================
 
-  const TL = { x: cornerRadius,             y: cornerRadius };
-  const TR = { x: tileW - cornerRadius,     y: cornerRadius };
-  const BR = { x: tileW - cornerRadius,     y: tileH - cornerRadius };
-  const BL = { x: cornerRadius,             y: tileH - cornerRadius };
+  const TL = { x: 0,        y: 0 };
+  const TR = { x: tileW,   y: 0 };
+  const BR = { x: tileW,   y: tileH };
+  const BL = { x: 0,        y: tileH };
 
   // ===============================
-  // Bézier handles (edge curvature)
+  // Bézier handles
   // ===============================
 
   // Top
-  const TL_out = { x: TL.x + cornerRadius, y: TL.y - inner };
-  const TR_in  = { x: TR.x - cornerRadius, y: TR.y - inner };
+  const TL_out = { x: TL.x + radius, y: TL.y - inner };
+  const TR_in  = { x: TR.x - radius, y: TR.y - inner };
 
   // Right
-  const TR_out = { x: TR.x + inner, y: TR.y + cornerRadius };
-  const BR_in  = { x: BR.x + inner, y: BR.y - cornerRadius };
+  const TR_out = { x: TR.x + inner, y: TR.y + radius };
+  const BR_in  = { x: BR.x + inner, y: BR.y - radius };
 
   // Bottom
-  const BR_out = { x: BR.x - cornerRadius, y: BR.y + inner };
-  const BL_in  = { x: BL.x + cornerRadius, y: BL.y + inner };
+  const BR_out = { x: BR.x - radius, y: BR.y + inner };
+  const BL_in  = { x: BL.x + radius, y: BL.y + inner };
 
   // Left
-  const BL_out = { x: BL.x - inner, y: BL.y - cornerRadius };
-  const TL_in  = { x: TL.x - inner, y: TL.y + cornerRadius };
+  const BL_out = { x: BL.x - inner, y: BL.y - radius };
+  const TL_in  = { x: TL.x - inner, y: TL.y + radius };
 
   // ===============================
   // SVG path (tile-local)
@@ -108,7 +106,7 @@ figma.ui.onmessage = (msg) => {
   ];
 
   // ===============================
-  // Image placeholder (same size, centred)
+  // Image placeholder (same as mask)
   // ===============================
 
   const placeholder = figma.createRectangle();
@@ -127,7 +125,7 @@ figma.ui.onmessage = (msg) => {
   // Assemble
   // ===============================
 
-  frame.appendChild(mask);       // mask must be first
+  frame.appendChild(mask);
   frame.appendChild(placeholder);
   figma.currentPage.appendChild(frame);
 
