@@ -1,118 +1,141 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
+  <title>Tile Builder</title>
   <style>
     body {
       font-family: Inter, system-ui, sans-serif;
       padding: 12px;
+      font-size: 12px;
     }
 
     h3 {
-      margin: 16px 0 8px;
-      font-size: 14px;
+      margin: 16px 0 12px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .group {
+      margin-bottom: 12px;
     }
 
     label {
       display: block;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px;
+      margin: 8px 0;
       font-size: 12px;
     }
 
-    input {
-      width: 100%;
-      margin-top: 4px;
-      padding: 6px;
-      box-sizing: border-box;
-    }
-
     button {
-      margin-top: 12px;
       width: 100%;
       padding: 8px;
       font-size: 12px;
       cursor: pointer;
     }
 
-    .section {
-      margin-bottom: 20px;
+    .checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 16px 0;
     }
 
-    .note {
-      font-size: 11px;
-      color: #666;
-      line-height: 1.4;
-      margin-top: 8px;
+    .divider {
+      height: 1px;
+      background: #e5e5e5;
+      margin: 16px 0;
     }
   </style>
 </head>
 <body>
 
-  <div class="section">
+  <!-- Global toggle -->
+  <div class="checkbox">
+    <input type="checkbox" id="noShrink" />
+    <label for="noShrink">Generate without margins</label>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Large tile -->
+  <div class="group">
     <h3>Large tile</h3>
 
     <label>
       Width
-      <input id="large-width" type="number" value="1440" />
+      <input id="largeWidth" type="number" value="1080" />
     </label>
 
     <label>
       Height
-      <input id="large-height" type="number" value="1800" />
+      <input id="largeHeight" type="number" value="1920" />
     </label>
 
-    <button id="generate-large">Generate large tile</button>
+    <button id="generateLarge">Generate large</button>
   </div>
 
-  <div class="section">
+  <div class="divider"></div>
+
+  <!-- Small tile -->
+  <div class="group">
     <h3>Small tile</h3>
 
     <label>
       Width
-      <input id="small-width" type="number" value="300" />
+      <input id="smallWidth" type="number" value="300" />
     </label>
 
     <label>
       Height
-      <input id="small-height" type="number" value="250" />
+      <input id="smallHeight" type="number" value="250" />
     </label>
 
-    <button id="generate-small">Generate small tile</button>
-
-    <div class="note">
-      All profile-based values apply a minimum of 6px to prevent visual collapse at small sizes.
-    </div>
+    <button id="generateSmall">Generate small</button>
   </div>
 
-  <script>
-    document.getElementById("generate-large").onclick = () => {
-      parent.postMessage(
-        {
-          pluginMessage: {
-            type: "generate",
-            tileType: "large",
-            width: Number(document.getElementById("large-width").value),
-            height: Number(document.getElementById("large-height").value)
-          }
-        },
-        "*"
-      );
-    };
+<script>
+  function generate(tileType) {
+    const noShrink = document.getElementById("noShrink").checked;
 
-    document.getElementById("generate-small").onclick = () => {
-      parent.postMessage(
-        {
-          pluginMessage: {
-            type: "generate",
-            tileType: "small",
-            width: Number(document.getElementById("small-width").value),
-            height: Number(document.getElementById("small-height").value)
-          }
-        },
-        "*"
-      );
-    };
-  </script>
+    const width =
+      tileType === "large"
+        ? Number(document.getElementById("largeWidth").value)
+        : Number(document.getElementById("smallWidth").value);
+
+    const height =
+      tileType === "large"
+        ? Number(document.getElementById("largeHeight").value)
+        : Number(document.getElementById("smallHeight").value);
+
+    parent.postMessage(
+      {
+        pluginMessage: {
+          type: "generate",
+          width,
+          height,
+          tileType,
+          noShrink
+        }
+      },
+      "*"
+    );
+  }
+
+  document.getElementById("generateLarge").onclick = () => {
+    generate("large");
+  };
+
+  document.getElementById("generateSmall").onclick = () => {
+    generate("small");
+  };
+</script>
 
 </body>
 </html>

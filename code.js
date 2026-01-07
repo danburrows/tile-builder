@@ -1,11 +1,17 @@
-figma.showUI(__html__, { width: 260, height: 420 });
+figma.showUI(__html__, { width: 300, height: 560 });
+
+/* ======================================================
+   Constants
+   ====================================================== */
+
+const MIN_MARGIN = 6;
 
 /* ======================================================
    Utilities
    ====================================================== */
 
-function withMin(value, min = 6) {
-  return Math.max(value, min);
+function roundInt(v) {
+  return Math.round(v);
 }
 
 /* ======================================================
@@ -14,11 +20,13 @@ function withMin(value, min = 6) {
 
 const TILE_PROFILES = {
   large: {
-    OUTER_PCT: 0.02875,
+    SHRINK_PCT: 0.0275, // 2.75% per side
+    OUTER_PCT: 0.03,
     INNER_PCT: 0.0875,
     RADIUS_PCT: 0.2
   },
   small: {
+    SHRINK_PCT: 0.03, // 3% per side
     OUTER_PCT: 0.03,
     INNER_PCT: 0.09,
     RADIUS_PCT: 0.2
@@ -40,7 +48,7 @@ figma.ui.onmessage = (msg) => {
    ====================================================== */
 
 function handleGenerateTile(msg) {
-  const { width, height, tileType } = msg;
+  const { width, height, tileType, noShrink } = msg;
   const profile = TILE_PROFILES[tileType];
 
   if (!profile) {
@@ -48,28 +56,64 @@ function handleGenerateTile(msg) {
     return;
   }
 
-  const tile = createTile(width, height, profile);
-  figma.currentPage.appendChild(tile);
+  // Create frame at input size
+  const frame = figma.createFrame();
+  frame.resize(width, height);
+  frame.name = `${width}×${height}`;
+  frame.fills = [];
+  frame.clipsContent = false;
 
-  const center = figma.viewport.center;
-  tile.x = center.x - width / 2;
-  tile.y = center.y - height / 2;
+  // Create tile (may be smaller)
+  const tile = createTile(width, height, profile, noShrink === true);
 
-  figma.currentPage.selection = [tile];
+  // Centre tile inside frame
+  tile.x = (width - tile.width) / 2;
+  tile.y = (height - tile.height) / 2;
+
+  frame.appendChild(tile);
+  figma.currentPage.appendChild(frame);
+
+  // Centre frame in viewport
+  const c = figma.viewport.center;
+  frame.x = c.x - width / 2;
+  frame.y = c.y - height / 2;
+
+  figma.currentPage.selection = [frame];
 }
 
-function createTile(W, H, profile) {
-  const { OUTER_PCT, INNER_PCT, RADIUS_PCT } = profile;
-
-  const S = Math.min(W, H);
+function createTile(inputW, inputH, profile, noShrink) {
+  const {
+    SHRINK_PCT,
+    OUTER_PCT,
+    INNER_PCT,
+    RADIUS_PCT
+  } = profile;
 
   /* ------------------------------
-     Geometry values
+     Base dimension (authoritative)
      ------------------------------ */
 
-  const margin = withMin(S * OUTER_PCT);
-  const bulge = withMin(S * INNER_PCT);
-  const handle = withMin(S * RADIUS_PCT);
+  const S = Math.min(inputW, inputH);
+
+  /* ------------------------------
+     Final tile size
+     ------------------------------ */
+
+  const shrink = noShrink ? 0 : roundInt(S * SHRINK_PCT);
+
+  const W = inputW - shrink * 2;
+  const H = inputH - shrink * 2;
+
+  /* ------------------------------
+     Geometry (based on S only)
+     ------------------------------ */
+
+  const rawMargin = S * OUTER_PCT;
+  const margin = roundInt(Math.max(rawMargin, MIN_MARGIN));
+  const marginDelta = margin - rawMargin;
+
+  const bulge = roundInt(S * INNER_PCT + marginDelta);
+  const handle = roundInt(S * RADIUS_PCT);
 
   /* ------------------------------
      Path construction
@@ -105,15 +149,13 @@ function createTile(W, H, profile) {
      ------------------------------ */
 
   const tile = figma.createVector();
-  tile.strokeWeight = 0;
-  tile.strokes = [];
-  ;
   tile.vectorPaths = [
     {
       windingRule: "EVENODD",
       data: pathData
     }
   ];
+
   tile.resize(W, H);
   tile.name = "Tile";
 
@@ -128,8 +170,11 @@ function createTile(W, H, profile) {
     }
   ];
 
-  // native Figma corner radius
-  tile.cornerRadius = withMin(S * RADIUS_PCT);
+  tile.strokes = [];
+  tile.strokeWeight = 0;
+
+  // Corner radius based on original input
+  tile.cornerRadius = roundInt(S * RADIUS_PCT);
 
   return tile;
 }
