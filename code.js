@@ -16,14 +16,12 @@ const TILE_PROFILES = {
   large: {
     OUTER_PCT: 0.02875,
     INNER_PCT: 0.0875,
-    RADIUS_PCT: 0.2,
-    IMAGE_OFFSET_PCT: -0.0875
+    RADIUS_PCT: 0.2
   },
   small: {
     OUTER_PCT: 0.03,
     INNER_PCT: 0.09,
-    RADIUS_PCT: 0.2,
-    IMAGE_OFFSET_PCT: -0.09
+    RADIUS_PCT: 0.2
   }
 };
 
@@ -50,49 +48,49 @@ function handleGenerateTile(msg) {
     return;
   }
 
-  const frame = createTile(width, height, profile, tileType);
-  figma.currentPage.appendChild(frame);
+  const tile = createTile(width, height, profile);
+  figma.currentPage.appendChild(tile);
 
-  const viewportCenter = figma.viewport.center;
-  frame.x = viewportCenter.x - width / 2;
-  frame.y = viewportCenter.y - height / 2;
+  const center = figma.viewport.center;
+  tile.x = center.x - width / 2;
+  tile.y = center.y - height / 2;
 
-  figma.currentPage.selection = [frame];
+  figma.currentPage.selection = [tile];
 }
 
-function createTile(W, H, profile, tileType) {
-  const { OUTER_PCT, INNER_PCT, RADIUS_PCT, IMAGE_OFFSET_PCT } = profile;
+function createTile(W, H, profile) {
+  const { OUTER_PCT, INNER_PCT, RADIUS_PCT } = profile;
 
-  const shortest = Math.min(W, H);
+  const S = Math.min(W, H);
 
   /* ------------------------------
-     Geometry values (clamped)
+     Geometry values
      ------------------------------ */
 
-  const outer = withMin(W * OUTER_PCT);
-  const inner = withMin(W * INNER_PCT);
-  const curveSpan = withMin(W * RADIUS_PCT);
+  const margin = withMin(S * OUTER_PCT);
+  const bulge = withMin(S * INNER_PCT);
+  const handle = withMin(S * RADIUS_PCT);
 
   /* ------------------------------
      Path construction
      ------------------------------ */
 
-  const TL = { x: outer, y: outer };
-  const TR = { x: W - outer, y: outer };
-  const BR = { x: W - outer, y: H - outer };
-  const BL = { x: outer, y: H - outer };
+  const TL = { x: margin, y: margin };
+  const TR = { x: W - margin, y: margin };
+  const BR = { x: W - margin, y: H - margin };
+  const BL = { x: margin, y: H - margin };
 
-  const TL_out = { x: TL.x + curveSpan, y: TL.y - inner };
-  const TR_in  = { x: TR.x - curveSpan, y: TR.y - inner };
+  const TL_out = { x: TL.x + handle, y: TL.y - bulge };
+  const TR_in  = { x: TR.x - handle, y: TR.y - bulge };
 
-  const TR_out = { x: TR.x + inner, y: TR.y + curveSpan };
-  const BR_in  = { x: BR.x + inner, y: BR.y - curveSpan };
+  const TR_out = { x: TR.x + bulge, y: TR.y + handle };
+  const BR_in  = { x: BR.x + bulge, y: BR.y - handle };
 
-  const BR_out = { x: BR.x - curveSpan, y: BR.y + inner };
-  const BL_in  = { x: BL.x + curveSpan, y: BL.y + inner };
+  const BR_out = { x: BR.x - handle, y: BR.y + bulge };
+  const BL_in  = { x: BL.x + handle, y: BL.y + bulge };
 
-  const BL_out = { x: BL.x - inner, y: BL.y - curveSpan };
-  const TL_in  = { x: TL.x - inner, y: TL.y + curveSpan };
+  const BL_out = { x: BL.x - bulge, y: BL.y - handle };
+  const TL_in  = { x: TL.x - bulge, y: TL.y + handle };
 
   const pathData =
     `M ${TL.x} ${TL.y}` +
@@ -103,30 +101,23 @@ function createTile(W, H, profile, tileType) {
     ` Z`;
 
   /* ------------------------------
-     Frame
+     Tile vector
      ------------------------------ */
 
-  const frame = figma.createFrame();
-  frame.resize(W, H);
-  frame.name = `${W}x${H}`;
-  frame.fills = [];
-  frame.clipsContent = false;
-
-  /* ------------------------------
-     Mask vector
-     ------------------------------ */
-
-  const mask = figma.createVector();
-  mask.vectorPaths = [
+  const tile = figma.createVector();
+  tile.strokeWeight = 0;
+  tile.strokes = [];
+  ;
+  tile.vectorPaths = [
     {
       windingRule: "EVENODD",
       data: pathData
     }
   ];
-  mask.resize(W, H);
-  mask.isMask = true;
-  mask.name = "mask";
-  mask.fills = [
+  tile.resize(W, H);
+  tile.name = "Tile";
+
+  tile.fills = [
     {
       type: "SOLID",
       color: {
@@ -137,48 +128,8 @@ function createTile(W, H, profile, tileType) {
     }
   ];
 
-  // corner radius (clamped)
-  mask.cornerRadius = withMin(shortest * RADIUS_PCT);
+  // native Figma corner radius
+  tile.cornerRadius = withMin(S * RADIUS_PCT);
 
-  /* ------------------------------
-     Image placeholder
-     ------------------------------ */
-
-  const placeholder = figma.createRectangle();
-  placeholder.resize(W, H);
-  placeholder.name = "image";
-  placeholder.fills = [
-    {
-      type: "SOLID",
-      color: {
-        r: 0x35 / 255,
-        g: 0x67 / 255,
-        b: 0xF6 / 255
-      }
-    }
-  ];
-
-  // image bleed offset (clamped, signed)
-  const rawOffset = shortest * IMAGE_OFFSET_PCT;
-  const imageOffset =
-    rawOffset < 0
-      ? -withMin(Math.abs(rawOffset))
-      : withMin(rawOffset);
-
-  placeholder.x = imageOffset;
-  placeholder.y = imageOffset;
-
-  placeholder.constraints = {
-    horizontal: "STRETCH",
-    vertical: "STRETCH"
-  };
-
-  /* ------------------------------
-     Assemble
-     ------------------------------ */
-
-  frame.appendChild(mask);
-  frame.appendChild(placeholder);
-
-  return frame;
+  return tile;
 }
