@@ -1,10 +1,10 @@
-figma.showUI(__html__, { width: 300, height: 560 });
+figma.showUI(__html__, { width: 260, height: 570 });
 
 /* ======================================================
    Constants
    ====================================================== */
 
-const MIN_MARGIN = 6;
+const MIN_PX = 6;
 
 /* ======================================================
    Utilities
@@ -12,6 +12,10 @@ const MIN_MARGIN = 6;
 
 function roundInt(v) {
   return Math.round(v);
+}
+
+function withMin(v, min = MIN_PX) {
+  return Math.max(roundInt(v), min);
 }
 
 /* ======================================================
@@ -23,13 +27,13 @@ const TILE_PROFILES = {
     SHRINK_PCT: 0.0275, // 2.75% per side
     OUTER_PCT: 0.03,
     INNER_PCT: 0.0875,
-    RADIUS_PCT: 0.2
+    RADIUS_PCT: 0.3
   },
   small: {
     SHRINK_PCT: 0.03, // 3% per side
     OUTER_PCT: 0.03,
     INNER_PCT: 0.09,
-    RADIUS_PCT: 0.2
+    RADIUS_PCT: 0.3
   }
 };
 
@@ -56,24 +60,21 @@ function handleGenerateTile(msg) {
     return;
   }
 
-  // Create frame at input size
+  // Outer frame at input size
   const frame = figma.createFrame();
   frame.resize(width, height);
   frame.name = `${width}×${height}`;
   frame.fills = [];
   frame.clipsContent = false;
 
-  // Create tile (may be smaller)
   const tile = createTile(width, height, profile, noShrink === true);
 
-  // Centre tile inside frame
   tile.x = (width - tile.width) / 2;
   tile.y = (height - tile.height) / 2;
 
   frame.appendChild(tile);
   figma.currentPage.appendChild(frame);
 
-  // Centre frame in viewport
   const c = figma.viewport.center;
   frame.x = c.x - width / 2;
   frame.y = c.y - height / 2;
@@ -96,24 +97,23 @@ function createTile(inputW, inputH, profile, noShrink) {
   const S = Math.min(inputW, inputH);
 
   /* ------------------------------
-     Final tile size
+     Shrink (per side, clamped)
      ------------------------------ */
 
-  const shrink = noShrink ? 0 : roundInt(S * SHRINK_PCT);
+  const shrink = noShrink
+    ? 0
+    : withMin(S * SHRINK_PCT);
 
   const W = inputW - shrink * 2;
   const H = inputH - shrink * 2;
 
   /* ------------------------------
-     Geometry (based on S only)
+     Geometry (all based on S)
      ------------------------------ */
 
-  const rawMargin = S * OUTER_PCT;
-  const margin = roundInt(Math.max(rawMargin, MIN_MARGIN));
-  const marginDelta = margin - rawMargin;
-
-  const bulge = roundInt(S * INNER_PCT + marginDelta);
-  const handle = roundInt(S * RADIUS_PCT);
+  const margin = withMin(S * OUTER_PCT);
+  const bulge  = withMin(S * INNER_PCT);
+  const handle = roundInt(S * RADIUS_PCT); // not clamped
 
   /* ------------------------------
      Path construction
@@ -173,7 +173,7 @@ function createTile(inputW, inputH, profile, noShrink) {
   tile.strokes = [];
   tile.strokeWeight = 0;
 
-  // Corner radius based on original input
+  // Native corner radius (no clamp)
   tile.cornerRadius = roundInt(S * RADIUS_PCT);
 
   return tile;
