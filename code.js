@@ -1,4 +1,4 @@
-figma.showUI(__html__, { width: 260, height: 570 });
+figma.showUI(__html__, { width: 260, height: 600 });
 
 /* ======================================================
    Constants
