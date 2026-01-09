@@ -1,40 +1,151 @@
-Below are the steps to get your plugin running. You can also find instructions at:
+# Tile Builder (Figma Plugin)
 
-  https://www.figma.com/plugin-docs/plugin-quickstart-guide/
+A private Figma plugin for generating expressive “tile” shapes with consistent margins, bulges, and rounded corners.
 
-This plugin template uses Typescript and NPM, two standard tools in creating JavaScript applications.
+This tool formalises a manual shape-building process into a repeatable system, while preserving the visual character of the original reference tiles.
 
-First, download Node.js which comes with NPM. This will allow you to install TypeScript and other
-libraries. You can find the download link here:
+---
 
-  https://nodejs.org/en/download/
+## What this plugin does
 
-Next, install TypeScript using the command:
+- Generates a custom vector “tile” shape
+- Wraps the tile in a frame set to the user’s input size
+- Optionally applies margins by shrinking the tile inside the frame
+- Maintains consistent geometry rules across all sizes
+- Applies native Figma corner radius (not baked into vectors)
 
-  npm install -g typescript
+The result is a predictable, design-faithful tile that matches a known reference shape.
 
-Finally, in the directory of your plugin, get the latest type definitions for the plugin API by running:
+---
 
-  npm install --save-dev @figma/plugin-typings
+## Core concepts
 
-If you are familiar with JavaScript, TypeScript will look very familiar. In fact, valid JavaScript code
-is already valid Typescript code.
+### 1. Input size is authoritative
 
-TypeScript adds type annotations to variables. This allows code editors such as Visual Studio Code
-to provide information about the Figma API while you are writing code, as well as help catch bugs
-you previously didn't notice.
+The user inputs a width and height.  
+A frame is always created at **exactly this size** and named accordingly:
 
-For more information, visit https://www.typescriptlang.org/
+300x250
 
-Using TypeScript requires a compiler to convert TypeScript (code.ts) into JavaScript (code.js)
-for the browser to run.
 
-We recommend writing TypeScript code using Visual Studio code:
+This frame represents the final, intended footprint.
 
-1. Download Visual Studio Code if you haven't already: https://code.visualstudio.com/.
-2. Open this directory in Visual Studio Code.
-3. Compile TypeScript to JavaScript: Run the "Terminal > Run Build Task..." menu item,
-    then select "npm: watch". You will have to do this again every time
-    you reopen Visual Studio Code.
+---
 
-That's it! Visual Studio Code will regenerate the JavaScript file every time you save.
+### 2. Margins (default behaviour)
+
+By default, the tile is **reduced inside the frame**, creating visible margins.
+
+- Margins are applied by shrinking the tile size
+- The tile is centred within the frame
+- This makes margins real and measurable, not perceptual
+
+### Generate without margins
+
+When enabled, the tile is generated at the full input size and touches the frame edges.
+
+---
+
+### 3. Percentage-based geometry
+
+All geometry is calculated from the **smallest input dimension**, not the shrunken size.
+
+This includes:
+- outer margin
+- bulge depth
+- corner radius
+
+This mirrors the original manual construction process and keeps the visual language consistent.
+
+---
+
+## Geometry rules
+
+### Tile variants
+
+The plugin supports two variants:
+
+#### Large tile
+- Shrink per side: **2.75%**
+- Outer margin: **3%**
+- Bulge depth: **8.75%**
+- Corner radius: **30%**
+
+#### Small tile
+- Shrink per side: **3%**
+- Outer margin: **3%**
+- Bulge depth: **9%**
+- Corner radius: **30%**
+
+All percentages are based on the **smallest input dimension**.
+
+---
+
+### Minimum values (important)
+
+To prevent collapse at small sizes, the following values are clamped:
+
+- Shrink per side: **minimum 6px**
+- Outer margin: **minimum 6px**
+- Bulge depth: **minimum 6px**
+
+Corner radius is **not clamped** and remains purely percentage-based.
+
+A note in the UI makes this behaviour explicit.
+
+---
+
+## Corner radius
+
+Rounded corners are applied using **Figma’s native corner radius**, not vector math.
+
+Corner radius = smallest input dimension × radius percentage
+
+
+Example:
+- Input: `1000 × 800`
+- Radius (30%): `300px`
+
+This keeps the tile editable and consistent with Figma’s design controls.
+
+---
+
+## What this plugin is not
+
+- It is not a layout tool
+- It is not a responsive system
+- It is not intended for public distribution (yet)
+
+This is a **private internal design utility**, built to codify a specific visual rule set.
+
+---
+
+## File structure
+
+/tile-builder
+├── manifest.json
+├── code.js
+├── ui.html
+└── README.md
+
+
+---
+
+## Usage
+
+1. Import the plugin via  
+   **Plugins → Development → Import plugin from manifest**
+2. Enter dimensions for a large or small tile
+3. Choose whether to generate with or without margins
+4. Run the generator
+
+The tile and frame are placed at the centre of the current viewport.
+
+---
+
+## Status
+
+This is considered a **stable v1**.
+
+Geometry rules, minimums, and behaviours are as close as currently possible in Figma, and locked unless a real use case proves otherwise.
+
